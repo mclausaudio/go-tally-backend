@@ -1,8 +1,8 @@
 {
-  "name": "backend",
+  "name": "go-tally-backend",
   "version": "0.1.0",
   "bin": {
-    "backend": "bin/backend.js"
+    "backend": "bin/go-tally-backend.js"
   },
   "scripts": {
     "build": "tsc",
