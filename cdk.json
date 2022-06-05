@@ -29,6 +29,9 @@
     "@aws-cdk/core:target-partitions": [
       "aws",
       "aws-cn"
-    ]
+    ],
+    "globals": {
+      "appName": "go-tally-backend"
+    }
   }
 }
