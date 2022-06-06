@@ -1,5 +1,7 @@
 # Backend for Go Tally - An open source productivity app by Michael Claus
 
+Work in progress -- more info comnig soon.
+---
 The `cdk.json` file tells the CDK Toolkit how to execute your app.
 
 ## Useful commands
