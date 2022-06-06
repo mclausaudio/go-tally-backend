@@ -6,5 +6,7 @@ import { LambdaStack } from '../lib/lambda-stack';
 
 const app = new cdk.App();
 
-new DynamoDBStack(app, 'GoTallyDynamoDBStack', {});
-new LambdaStack(app, 'GoTallyLambdaStack', {});
+const dynamoDBStack = new DynamoDBStack(app, 'GoTallyDynamoDBStack', {});
+const lambdaStack = new LambdaStack(app, 'GoTallyLambdaStack', { 
+  ddbTable: dynamoDBStack.primaryTable
+});
