@@ -7,7 +7,7 @@ import { UserPool, UserPoolClient, UserPoolClientIdentityProvider, VerificationE
 export class CognitoStack extends Stack {
   public readonly cognitoUserPool: UserPool;
   public readonly cognitoUserPoolClient: UserPoolClient;
-  constructor(scope: Construct, id: string, props?: StackProps) {
+  constructor(scope: Construct, id: string, props: StackProps) {
     super(scope, id, props);
 
     // User Pool - https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_cognito.UserPoolProps.html
@@ -29,8 +29,17 @@ export class CognitoStack extends Stack {
       },
       accountRecovery: AccountRecovery.EMAIL_ONLY,
       removalPolicy: RemovalPolicy.RETAIN,
+      // lambdaTriggers: {
+      //   postConfirmation: createUser
+      // }
     });
     this.cognitoUserPool = userPool;
+
+    // userpool.addTrigger(cognito.UserPoolOperation.USER_MIGRATION, new lambda.Function(this, 'userMigrationFn', {
+    //   runtime: lambda.Runtime.NODEJS_12_X,
+    //   handler: 'index.handler',
+    //   code: lambda.Code.fromAsset(path.join(__dirname, 'path/to/asset')),
+    // }));
 
 
     const standardCognitoAttributes = {
