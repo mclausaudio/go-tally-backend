@@ -1,14 +1,31 @@
 import { Stack, StackProps, CfnOutput, RemovalPolicy } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { UserPool, UserPoolClient, UserPoolClientIdentityProvider, VerificationEmailStyle, StringAttribute, AccountRecovery, ClientAttributes } from 'aws-cdk-lib/aws-cognito';
+import { UserPool, UserPoolClient, UserPoolClientIdentityProvider, AccountRecovery, ClientAttributes, UserPoolOperation } from 'aws-cdk-lib/aws-cognito';
 
+import { Table } from 'aws-cdk-lib/aws-dynamodb';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+
+export interface CognitoProps extends StackProps {
+  ddbTable: Table,
+}
 
 
 export class CognitoStack extends Stack {
   public readonly cognitoUserPool: UserPool;
   public readonly cognitoUserPoolClient: UserPoolClient;
-  constructor(scope: Construct, id: string, props: StackProps) {
+  constructor(scope: Construct, id: string, props: CognitoProps) {
     super(scope, id, props);
+    
+    // We create this lambda to write user data to DB, for the userPools POST_CONFIRMATION trigger
+    const createUser = new lambda.Function(this, 'create-user-lambda-handler', {
+      runtime: lambda.Runtime.NODEJS_14_X,
+      code: lambda.Code.fromAsset('lambda-source-code'),
+      handler: 'createUser.handler',
+      environment: {
+        TABLE_NAME: props.ddbTable.tableName ? props.ddbTable.tableName : '',
+      },
+    });
+    props.ddbTable.grantReadWriteData(createUser);
 
     // User Pool - https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_cognito.UserPoolProps.html
     const userPool = new UserPool(this, 'go-tally-user-pool', {
@@ -16,32 +33,27 @@ export class CognitoStack extends Stack {
       selfSignUpEnabled: true,
       signInAliases: {
         username: true,
-        email: true,
+        preferredUsername: true
       },
       autoVerify: {
         email: true
       },
       standardAttributes: {
-        givenName: {
-          required: true,
-          mutable: true,
+        preferredUsername: {
+          required: false,
+          mutable: true
         },
+        email: {
+          required: true,
+          mutable: true
+        }
       },
       accountRecovery: AccountRecovery.EMAIL_ONLY,
       removalPolicy: RemovalPolicy.RETAIN,
-      // lambdaTriggers: {
-      //   postConfirmation: createUser
-      // }
     });
+    userPool.addTrigger(UserPoolOperation.POST_CONFIRMATION, createUser);
     this.cognitoUserPool = userPool;
-
-    // userpool.addTrigger(cognito.UserPoolOperation.USER_MIGRATION, new lambda.Function(this, 'userMigrationFn', {
-    //   runtime: lambda.Runtime.NODEJS_12_X,
-    //   handler: 'index.handler',
-    //   code: lambda.Code.fromAsset(path.join(__dirname, 'path/to/asset')),
-    // }));
-
-
+  
     const standardCognitoAttributes = {
       givenName: true,
       familyName: true,
