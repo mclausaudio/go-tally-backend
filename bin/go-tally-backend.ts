@@ -9,7 +9,9 @@ import { CognitoStack } from '../lib/cognito-stack';
 const app = new cdk.App();
 
 const dynamoDBStack = new DynamoDBStack(app, 'GoTallyDynamoDBStack', {});
-const cognitoStack = new CognitoStack(app, 'GoTallyCognitoStack', {});
+const cognitoStack = new CognitoStack(app, 'GoTallyCognitoStack', {
+  ddbTable: dynamoDBStack.primaryTable
+});
 const apiStack = new APIStack(app, 'GoTallyBackEndAPI', {
   cognitoUserPool: cognitoStack.cognitoUserPool,
   cognitoUserPoolClient: cognitoStack.cognitoUserPoolClient
