@@ -1,4 +1,4 @@
-import { APIGatewayProxyEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
+import { APIGatewayProxyEvent, APIGatewayProxyHandler, APIGatewayProxyResult, CognitoIdentity } from 'aws-lambda';
 import * as AWS from 'aws-sdk';
 
 const TABLE_NAME = process.env.TABLE_NAME || '';
@@ -17,28 +17,35 @@ const db = new AWS.DynamoDB.DocumentClient();
 //   }
 // };
 
-export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  const body = event.body ? JSON.parse(event.body) : {};
-  console.log("Body", body);
+export const handler = async (event: any)=> {
+  console.log(event)
   const params = {
     TableName: TABLE_NAME,
-    Item: body,
+    Item: {
+      PK: `USER#${event.userName}`,
+      SK: `METADATA#${event.userName}`,
+      email: event.request.userAttributes.email
+    },
     ReturnValues: "ALL_OLD",
     // ONLY create a user, if PK (USER#123) do not exist,  If they already exist, already a user
     ConditionExpression: "attribute_not_exists(PK)"
   };
+  console.log(params)
 
   
 
   try {
     const response = await db.put(params).promise();
-    return {
+    console.log({
       statusCode: 200,
       body: JSON.stringify({
         "event": event,
-        "response": response}),
-    };
+        "response": response
+      }),
+    })
+    return event;
   } catch (error) {
+    console.log(error)
     return {
       statusCode: 500,
       body: JSON.stringify(error),
