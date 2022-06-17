@@ -24,30 +24,16 @@ export class LambdaStack extends Stack {
       },
     });
     props.ddbTable.grantReadWriteData(dynamoLambda);
-
-    const createUser = new lambda.Function(this, 'create-user-lambda-handler', {
-      runtime: lambda.Runtime.NODEJS_14_X,
-      code: lambda.Code.fromAsset('lambda-source-code'),
-      handler: 'createUser.handler',
-      environment: {
-        TABLE_NAME: props.ddbTable.tableName ? props.ddbTable.tableName : '',
-      },
-    });
-    props.ddbTable.grantReadWriteData(createUser);
-
+    
     const restApi = props.restApi;
     restApi.root.addMethod("ANY");
     const users = restApi.root.addResource('users');
-    users.addMethod(
-      "POST",
-      new apigw.LambdaIntegration(createUser, { proxy: true })
-    )
     const user = users.addResource('{userId}')
     // integrate GET /todos with getTodosLambda
-    user.addMethod(
-      'GET',
-      new apigw.LambdaIntegration(dynamoLambda, { proxy: true }),
-    );
+    // user.addMethod(
+    //   'GET',
+    //   new apigw.LambdaIntegration(dynamoLambda, { proxy: true }),
+    // );
   }
 
 }
