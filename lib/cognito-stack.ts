@@ -15,11 +15,21 @@ export class CognitoStack extends Stack {
   public readonly cognitoUserPoolClient: UserPoolClient;
   constructor(scope: Construct, id: string, props: CognitoProps) {
     super(scope, id, props);
+
+    const verifyUserNotInDB = new lambda.Function(this, 'verify-user-not-in-db-lambda-handler', {
+      runtime: lambda.Runtime.NODEJS_14_X,
+      code: lambda.Code.fromAsset('lambda-source-code/users/'),
+      handler: 'verifyUserNotInDB.handler',
+      environment: {
+        TABLE_NAME: props.ddbTable.tableName ? props.ddbTable.tableName : '',
+      },
+    });
+    props.ddbTable.grantReadWriteData(verifyUserNotInDB);
     
     // We create this lambda to write user data to DB, for the userPools POST_CONFIRMATION trigger
     const createUser = new lambda.Function(this, 'create-user-lambda-handler', {
       runtime: lambda.Runtime.NODEJS_14_X,
-      code: lambda.Code.fromAsset('lambda-source-code'),
+      code: lambda.Code.fromAsset('lambda-source-code/users/'),
       handler: 'createUser.handler',
       environment: {
         TABLE_NAME: props.ddbTable.tableName ? props.ddbTable.tableName : '',
@@ -51,7 +61,11 @@ export class CognitoStack extends Stack {
       accountRecovery: AccountRecovery.EMAIL_ONLY,
       removalPolicy: RemovalPolicy.RETAIN,
     });
+    // Add lambdaTrigger to make sure user doesn't already exist in DB
+    userPool.addTrigger(UserPoolOperation.PRE_SIGN_UP, verifyUserNotInDB);
+    //  Add lambdaTrigger to add user data to DynamoDB
     userPool.addTrigger(UserPoolOperation.POST_CONFIRMATION, createUser);
+    
     this.cognitoUserPool = userPool;
   
     const standardCognitoAttributes = {
