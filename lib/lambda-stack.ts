@@ -1,4 +1,4 @@
-import { Stack, StackProps } from 'aws-cdk-lib';
+import { Stack, StackProps, CfnOutput } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { Table } from 'aws-cdk-lib/aws-dynamodb';
 
@@ -11,7 +11,7 @@ export interface LambdaStackProps extends StackProps {
 }
 
 export class LambdaStack extends Stack {
-  constructor(scope: Construct, id: string, props?: LambdaStackProps) {
+  constructor(scope: Construct, id: string, props: LambdaStackProps) {
     super(scope, id, props);
 
     // Declare a lambda
@@ -20,22 +20,34 @@ export class LambdaStack extends Stack {
       code: lambda.Code.fromAsset('lambda-source-code'),  // code loaded from the "lambda-source-code" directory
       handler: 'get-user-metadata.handler',                // file is "hello", function is "handler"
       environment: {
-        TABLE_NAME: props?.ddbTable.tableName ? props.ddbTable.tableName : '',
+        TABLE_NAME: props.ddbTable.tableName ? props.ddbTable.tableName : '',
       },
     });
+    props.ddbTable.grantReadWriteData(dynamoLambda);
 
-    props?.ddbTable.grantReadWriteData(dynamoLambda);
+    const createUser = new lambda.Function(this, 'create-user-lambda-handler', {
+      runtime: lambda.Runtime.NODEJS_14_X,
+      code: lambda.Code.fromAsset('lambda-source-code'),
+      handler: 'createUser.handler',
+      environment: {
+        TABLE_NAME: props.ddbTable.tableName ? props.ddbTable.tableName : '',
+      },
+    });
+    props.ddbTable.grantReadWriteData(createUser);
 
-    const restApi = props?.restApi;
-    restApi?.root.addMethod("ANY");
-    const users = restApi?.root.addResource('users');
-    const user = users?.addResource('{userId}')
+    const restApi = props.restApi;
+    restApi.root.addMethod("ANY");
+    const users = restApi.root.addResource('users');
+    users.addMethod(
+      "POST",
+      new apigw.LambdaIntegration(createUser, { proxy: true })
+    )
+    const user = users.addResource('{userId}')
     // integrate GET /todos with getTodosLambda
-    user?.addMethod(
+    user.addMethod(
       'GET',
       new apigw.LambdaIntegration(dynamoLambda, { proxy: true }),
     );
-    
   }
 
 }
